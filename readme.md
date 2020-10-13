@@ -1,0 +1,1 @@
+Next JS using https://api.coindesk.com/v1/bpi/currentprice.json as it's API to display current Bitcoin prices in 3 currencies
