@@ -1,40 +1,84 @@
+import moment from 'moment';
+
+import LineChart from './LineChart';
+import ToolTip from './ToolTip';
+import InfoBox from './InfoBox';
+
 class Prices extends React.Component {
-    state = {
-        currency:'USD'
-    }
-    render() {
-
-        let list = "";
-
-        if (this.state.currency === "USD") {
-            list = <li className="list-group-item">
-            Bitcoin rate for {this.props.bpi.USD.description}:<span class="badge badge-primary">{this.props.bpi.USD.code}</span> <strong>{this.props.bpi.USD.rate}</strong>
-            </li>
-        } else if (this.state.currency === "GBP") {
-            list = <li className="list-group-item">
-            Bitcoin rate for {this.props.bpi.GBP.description}:<span class="badge badge-primary">{this.props.bpi.GBP.code}</span> <strong>{this.props.bpi.GBP.rate}</strong>
-            </li>
-        } else if (this.state.currency === "EUR") {
-            list = <li className="list-group-item">
-            Bitcoin rate for {this.props.bpi.EUR.description}:<span class="badge badge-primary">{this.props.bpi.EUR.code}</span> <strong>{this.props.bpi.EUR.rate}</strong>
-            </li>
+    constructor(props) {
+        super(props);
+        this.state = {
+          fetchingData: true,
+          data: null,
+          hoverLoc: null,
+          activePoint: null
         }
+      }
+      handleChartHover(hoverLoc, activePoint){
+        this.setState({
+          hoverLoc: hoverLoc,
+          activePoint: activePoint
+        })
+      }
+      componentDidMount(){
+        const getData = () => {
+          const url = 'https://api.coindesk.com/v1/bpi/historical/close.json';
+    
+          fetch(url).then( r => r.json())
+            .then((bitcoinData) => {
+              const sortedData = [];
+              let count = 0;
+              for (let date in bitcoinData.bpi){
+                sortedData.push({
+                  d: moment(date).format('MMM DD'),
+                  p: bitcoinData.bpi[date].toLocaleString('us-EN',{ style: 'currency', currency: 'USD' }),
+                  x: count, //previous days
+                  y: bitcoinData.bpi[date] // numerical price
+                });
+                count++;
+              }
+              this.setState({
+                data: sortedData,
+                fetchingData: false
+              })
+            })
+            .catch((e) => {
+              console.log(e);
+            });
+        }
+        getData();
+      }
+      render() {
         return (
-            <div>
-                <ul className="list-group">
-                    {list}
-                    
-                </ul>
-                <br />
-                <select onChange={e => this.setState({ currency: e.target.value })} className=" form-control">
-                    <option value="USD">USD</option>
-                    <option value="GBP">GBP</option>
-                    <option value="EUR">EUR</option>
-                </select>
-            
-       </div>
-   )
+    
+          <div className='container'>
+            <div className='row'>
+              <h1>30 Day Bitcoin Price Chart</h1>
+            </div>
+            <div className='row'>
+              { !this.state.fetchingData ?
+              <InfoBox data={this.state.data} />
+              : null }
+            </div>
+            <div className='row'>
+              <div className='popup'>
+                {this.state.hoverLoc ? <ToolTip hoverLoc={this.state.hoverLoc} activePoint={this.state.activePoint}/> : null}
+              </div>
+            </div>
+            <div className='row'>
+              <div className='chart'>
+                { !this.state.fetchingData ?
+                  <LineChart data={this.state.data} onChartHover={ (a,b) => this.handleChartHover(a,b) }/>
+                  : null }
+              </div>
+            </div>
+            <div className='row'>
+              <div id="coindesk"> Powered by <a href="http://www.coindesk.com/price/">CoinDesk</a></div>
+            </div>
+          </div>
+    
+        );
+      }
     }
-}
 
 export default Prices
